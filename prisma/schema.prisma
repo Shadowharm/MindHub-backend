@@ -8,19 +8,20 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
-  email            String            @unique
-  name             String?
-  password         String
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  email     String   @unique
+  name      String?
+  password  String
 
-  workInterval     Int?              @default(25) @map("work_interval")
-  breakInterval    Int?              @default(5) @map("break_interval")
-  intervalsCount   Int?              @default(10) @map("intervals_count")
+  workInterval     Int?                @default(25) @map("work_interval")
+  breakInterval    Int?                @default(5) @map("break_interval")
+  intervalsCount   Int?                @default(10) @map("intervals_count")
   pomodoroSessions PomodoroSession[]
   tasks            Task[]
   timeBlocks       TimeBlock[]
+  workspaces       UsersOnWorkspaces[]
 
   @@map("user")
 }
@@ -34,8 +35,34 @@ model Task {
   isCompleted Boolean?  @default(false) @map("is_completed")
   userId      String    @map("user_id")
   user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
 
   @@map("task")
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  name        String
+  description String
+
+  tasks Task[]
+  users UsersOnWorkspaces[]
+
+  @@map("workspace")
+}
+
+model UsersOnWorkspaces {
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+  role        Role      @default(guest)
+
+  @@id([userId, workspaceId])
 }
 
 model TimeBlock {
@@ -74,6 +101,13 @@ model PomodoroRound {
   pomodoroSession   PomodoroSession @relation(fields: [pomodoroSessionId], references: [id], onDelete: Cascade)
 
   @@map("pomodoro_round")
+}
+
+enum Role {
+  owner
+  admin
+  member
+  guest
 }
 
 enum Priority {

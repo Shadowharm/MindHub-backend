@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TaskModule } from './task/task.module';
 import { TimeBlockModule } from './time-block/time-block.module';
 import { PomodoroModule } from './pomodoro/pomodoro.module';
+import { WorkspaceModule } from './workspace/workspace.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { PomodoroModule } from './pomodoro/pomodoro.module';
     TaskModule,
     TimeBlockModule,
     PomodoroModule,
+    WorkspaceModule,
   ],
 })
 export class AppModule {}

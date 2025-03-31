@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { TaskDto } from './dto/task.dto';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class TaskService {
   constructor(private prisma: PrismaService) {}
 
-  getAll(userId: string) {
+  getAll(userId: User['id']) {
     return this.prisma.task.findMany({
       where: {
         userId,
