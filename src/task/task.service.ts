@@ -23,7 +23,7 @@ export class TaskService {
     });
   }
 
-  async create(dto: TaskDto, userId: string) {
+  async create({workspaceId, ...dto}: TaskDto, userId: string) {
     return this.prisma.task.create({
       data: {
         ...dto,
@@ -32,6 +32,11 @@ export class TaskService {
             id: userId,
           },
         },
+        workspace: {
+          connect: {
+            id: workspaceId,
+          },
+        }
       },
     });
   }
