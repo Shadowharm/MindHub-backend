@@ -15,6 +15,7 @@ import { CurrentUser } from '../auth/decorators/user.decorators';
 import { TaskDto } from './dto/task.dto';
 import { Auth } from '../auth/decorators/auth.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { User } from '@prisma/client';
 
 @ApiTags('Задачи')
 @Controller('user/tasks')
@@ -26,7 +27,7 @@ export class TaskController {
   })
   @Get()
   @Auth()
-  async getAll(@CurrentUser('id') userId: string) {
+  async getAll(@CurrentUser('id') userId: User['id']) {
     return this.taskService.getAll(userId);
   }
 

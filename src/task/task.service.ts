@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { TaskDto } from './dto/task.dto';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class TaskService {
   constructor(private prisma: PrismaService) {}
 
-  getAll(userId: string) {
+  getAll(userId: User['id']) {
     return this.prisma.task.findMany({
       where: {
         userId,
@@ -22,7 +23,7 @@ export class TaskService {
     });
   }
 
-  async create(dto: TaskDto, userId: string) {
+  async create({workspaceId, ...dto}: TaskDto, userId: string) {
     return this.prisma.task.create({
       data: {
         ...dto,
@@ -31,6 +32,11 @@ export class TaskService {
             id: userId,
           },
         },
+        workspace: {
+          connect: {
+            id: workspaceId,
+          },
+        }
       },
     });
   }

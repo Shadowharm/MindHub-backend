@@ -2,24 +2,22 @@ import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 import { Priority } from '@prisma/client';
 import { Transform } from 'class-transformer';
 
-export class TaskDto {
+export class WorkspaceDto {
+  id: string;
+
+  createdAt: number;
+
+  updatedAt: number;
+
   @IsString()
-  @IsOptional()
   name: string;
 
-  @IsBoolean()
-  @IsOptional()
-  isCompleted?: boolean;
-
   @IsString()
   @IsOptional()
-  createdAt?: string;
+  description?: string;
 
   @IsEnum(Priority)
   @IsOptional()
   @Transform(({ value }) => ('' + value).toLowerCase())
   priority?: Priority;
-
-  @IsString()
-  workspaceId: string
 }
