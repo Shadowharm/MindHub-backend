@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNumber,
@@ -25,15 +26,33 @@ export class PomodoroSettingsDto {
 }
 
 export class UserDto extends PomodoroSettingsDto {
+  @ApiProperty({
+    example: 'cm7xfa4440000ive9d2nz15b3',
+    description: 'Уникальный идентификатор',
+  })
+  id?: number;
+
+  @ApiProperty({
+    example: 'example@gmail.com',
+    description: 'Логин пользователя',
+  })
   @IsEmail()
   @IsOptional()
   email?: string;
 
+  @ApiProperty({
+    example: '123123',
+    description: 'Пароль',
+  })
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   @IsOptional()
   @IsString()
   password?: string;
 
+  @ApiProperty({
+    example: 'Дональд Трамп',
+    description: 'Имя пользователя',
+  })
   @IsOptional()
   @IsString()
   name?: string;

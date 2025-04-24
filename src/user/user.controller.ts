@@ -9,8 +9,8 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Auth } from '../auth/decorators/auth.decorator';
-import { UserDto } from './dto/user.dto';
 import { CurrentUser } from '../auth/decorators/user.decorators';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('user/profile')
 export class UserController {
@@ -27,7 +27,7 @@ export class UserController {
   @HttpCode(200)
   @Put()
   @Auth()
-  async update(@CurrentUser('id') id: string, @Body() body: UserDto) {
+  async update(@CurrentUser('id') id: string, @Body() body: UpdateUserDto) {
     return this.userService.update(id, body);
   }
 }

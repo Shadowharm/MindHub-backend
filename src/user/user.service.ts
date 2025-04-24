@@ -4,11 +4,53 @@ import { AuthDto } from '../auth/dto/auth.dto';
 import { hash } from 'argon2';
 import { startOfDay, subDays } from 'date-fns';
 import { User } from '@prisma/client';
-import { UserDto } from './dto/user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
+  ADMIN_EMAIL = 'admin@midhub.com';
+  ADMIN_PASSWORD = 'qweqwe';
+
+  async onApplicationBootstrap() {
+    try {
+      if (!this.getByEmail(this.ADMIN_EMAIL)) {
+        await this.create({
+          email: this.ADMIN_EMAIL,
+          password: this.ADMIN_PASSWORD,
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async create(dto: AuthDto) {
+    const user = {
+      email: dto.email,
+      name: '',
+      password: await hash(dto.password),
+    };
+
+    return this.prisma.user.create({
+      data: user,
+    });
+  }
+
+  async update(id: string, dto: UpdateUserDto) {
+    let data = dto;
+
+    if (dto.password) {
+      data = { ...dto, password: await hash(dto.password) };
+    }
+    const user = await this.prisma.user.update({
+      where: {
+        id,
+      },
+      data,
+    });
+    return this.getUserWithoutPassword(user);
+  }
 
   getByEmail(email: string) {
     return this.prisma.user.findUnique({
@@ -74,32 +116,5 @@ export class UserService {
         weekTasks,
       },
     };
-  }
-
-  async create(dto: AuthDto) {
-    const user = {
-      email: dto.email,
-      name: '',
-      password: await hash(dto.password),
-    };
-
-    return this.prisma.user.create({
-      data: user,
-    });
-  }
-
-  async update(id: string, dto: UserDto) {
-    let data = dto;
-
-    if (dto.password) {
-      data = { ...dto, password: await hash(dto.password) };
-    }
-    const user = await this.prisma.user.update({
-      where: {
-        id,
-      },
-      data,
-    });
-    return this.getUserWithoutPassword(user);
   }
 }
