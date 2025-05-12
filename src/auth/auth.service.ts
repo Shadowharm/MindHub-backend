@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -10,6 +11,7 @@ import { AuthDto } from './dto/auth.dto';
 import { verify } from 'argon2';
 import { Response } from 'express';
 import { User } from '@prisma/client';
+import { URL } from 'node:url';
 
 @Injectable()
 export class AuthService {
@@ -28,18 +30,23 @@ export class AuthService {
   }> {
     const user = await this.validateUser(dto);
     const tokens = this.issueTokens(user.id);
-    return { ...tokens, user: this.userService.getUserWithoutPassword(user) };
+    return { ...tokens, user };
   }
 
   async register(dto: AuthDto) {
-    const oldUser = await this.userService.getByEmail(dto.email);
-    if (oldUser) throw new BadRequestException('User already exists');
+    try {
+      const oldUser = await this.userService.getByEmail(dto.email);
+      if (oldUser) throw new BadRequestException('User already exists');
 
-    const user = await this.userService.create(dto);
+      const user = await this.userService.create(dto);
 
-    const tokens = this.issueTokens(user.id);
+      const tokens = this.issueTokens(user.id);
 
-    return { ...tokens, user: this.userService.getUserWithoutPassword(user) };
+      return { ...tokens, user };
+    } catch (error) {
+      console.error(error);
+      throw new HttpException(error.message, error.status);
+    }
   }
 
   async getNewTokens(refreshToken: string) {
@@ -50,7 +57,7 @@ export class AuthService {
 
     const tokens = this.issueTokens(user.id);
     return {
-      user: this.userService.getUserWithoutPassword(user),
+      user,
       ...tokens,
     };
   }
@@ -73,16 +80,16 @@ export class AuthService {
   }
 
   private async validateUser(dto: AuthDto) {
-    const user = await this.userService.getByEmail(dto.email);
+    const user = await this.userService.getWithPassword(dto.email);
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    const isValide = await verify(user.password, dto.password);
+    const isValide = await verify(user.password.password, dto.password);
     if (!isValide) {
-      throw new UnauthorizedException('Invalid password');
+      throw new UnauthorizedException('Invalid email or password');
     }
 
-    return user;
+    return this.userService.getByEmail(dto.email);
   }
 
   addRefreshTokenToResponse(res: Response, refreshToken: string) {
@@ -90,20 +97,20 @@ export class AuthService {
     expiresIn.setDate(expiresIn.getDate() + this.EXPIRE_DAY_REFRESH_TOKEN);
     res.cookie(this.REFRESH_TOKEN_NAME, refreshToken, {
       httpOnly: true,
-      domain: process.env.DOMAIN,
+      domain: new URL(process.env.DOMAIN).hostname,
       expires: expiresIn,
-      secure: true,
-      sameSite: 'none',
+      // secure: true,
+      sameSite: 'lax',
     });
   }
 
   removeRefreshTokenFromResponse(res: Response) {
     res.cookie(this.REFRESH_TOKEN_NAME, '', {
       httpOnly: true,
-      domain: process.env.DOMAIN,
+      domain: new URL(process.env.DOMAIN).hostname,
       expires: new Date(0),
-      secure: true,
-      sameSite: 'none',
+      // secure: true,
+      sameSite: 'lax',
     });
   }
 }

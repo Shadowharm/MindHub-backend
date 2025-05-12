@@ -1,55 +1,79 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { AuthDto } from '../auth/dto/auth.dto';
 import { hash } from 'argon2';
 import { startOfDay, subDays } from 'date-fns';
 import { User } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { WorkspaceService } from '../workspace/workspace.service';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
-  ADMIN_EMAIL = 'admin@midhub.com';
-  ADMIN_PASSWORD = 'qweqwe';
-
-  async onApplicationBootstrap() {
-    try {
-      if (!this.getByEmail(this.ADMIN_EMAIL)) {
-        await this.create({
-          email: this.ADMIN_EMAIL,
-          password: this.ADMIN_PASSWORD,
-        });
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
+  constructor(
+    private prisma: PrismaService,
+    private workspaceService: WorkspaceService,
+  ) {}
 
   async create(dto: AuthDto) {
-    const user = {
-      email: dto.email,
-      name: '',
-      password: await hash(dto.password),
-    };
-
-    return this.prisma.user.create({
-      data: user,
-    });
+    try {
+      return this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            email: dto.email,
+            name: dto.name,
+          },
+        });
+        await Promise.all([
+          this.workspaceService.create({ name: 'Мои задачи' }, user.id, tx),
+          tx.userPassword.create({
+            data: { userId: user.id, password: await hash(dto.password) },
+          }),
+          tx.userSettings.create({ data: { userId: user.id } }),
+        ]);
+        return user;
+      });
+    } catch (error) {
+      console.error(error);
+      throw new HttpException(error.message, error.status);
+    }
   }
 
   async update(id: string, dto: UpdateUserDto) {
-    let data = dto;
-
-    if (dto.password) {
-      data = { ...dto, password: await hash(dto.password) };
+    try {
+      return this.prisma.$transaction(async (tx) => {
+        const [user] = await Promise.all([
+          tx.user.update({
+            data: {
+              email: dto.email,
+              name: dto.name,
+            },
+            where: {
+              id,
+            },
+          }),
+          ...(dto.password
+            ? [
+                tx.userPassword.update({
+                  data: { password: await hash(dto.password) },
+                  where: { userId: id },
+                }),
+              ]
+            : []),
+          tx.userSettings.update({
+            data: {
+              workInterval: dto.workInterval || 25,
+              breakInterval: dto.breakInterval || 5,
+              intervalsCount: dto.intervalsCount || 10,
+            },
+            where: { userId: id },
+          }),
+        ]);
+        return user;
+      });
+    } catch (error) {
+      console.error(error);
+      throw new HttpException(error.message, error.status);
     }
-    const user = await this.prisma.user.update({
-      where: {
-        id,
-      },
-      data,
-    });
-    return this.getUserWithoutPassword(user);
   }
 
   getByEmail(email: string) {
@@ -60,21 +84,27 @@ export class UserService {
     });
   }
 
+  getWithPassword(email: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+      include: {
+        password: true,
+      },
+    });
+  }
+
   getById(id: string) {
     return this.prisma.user.findUnique({
       where: {
         id,
       },
       include: {
+        settings: true,
         tasks: true,
       },
     });
-  }
-
-  getUserWithoutPassword(user: User): Omit<User, 'password'> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...rest } = user;
-    return rest;
   }
 
   async getProfile(id: string) {
@@ -108,7 +138,7 @@ export class UserService {
     });
 
     return {
-      user: this.getUserWithoutPassword(profile),
+      user: profile,
       statistics: {
         totalTasks,
         completedTasks,

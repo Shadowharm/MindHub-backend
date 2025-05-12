@@ -14,7 +14,8 @@ import { PomodoroRoundDto, PomodoroSessionDto } from './dto/pomodoro.dto';
 import { PomodoroService } from './pomodoro.service';
 import { CurrentUser } from '../auth/decorators/user.decorators';
 import { Auth } from '../auth/decorators/auth.decorator';
-
+import { ApiTags } from '@nestjs/swagger';
+@ApiTags('Pomodoro таймер')
 @Controller('user/timer')
 export class PomodoroController {
   constructor(private readonly pomodoroService: PomodoroService) {}

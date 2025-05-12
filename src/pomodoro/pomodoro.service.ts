@@ -35,8 +35,12 @@ export class PomodoroService {
       where: {
         id: userId,
       },
-      select: {
-        intervalsCount: true,
+      include: {
+        settings: {
+          select: {
+            intervalsCount: true,
+          },
+        },
       },
     });
 
@@ -46,7 +50,7 @@ export class PomodoroService {
       data: {
         rounds: {
           createMany: {
-            data: Array.from({ length: user.intervalsCount }, () => ({
+            data: Array.from({ length: user.settings.intervalsCount }, () => ({
               totalSeconds: 0,
             })),
           },

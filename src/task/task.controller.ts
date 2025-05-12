@@ -9,13 +9,15 @@ import {
   Param,
   Delete,
   Post,
+  Query,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { CurrentUser } from '../auth/decorators/user.decorators';
-import { TaskDto } from './dto/task.dto';
 import { Auth } from '../auth/decorators/auth.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { User } from '@prisma/client';
+import { User, Workspace } from '@prisma/client';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
 
 @ApiTags('Задачи')
 @Controller('user/tasks')
@@ -27,8 +29,11 @@ export class TaskController {
   })
   @Get()
   @Auth()
-  async getAll(@CurrentUser('id') userId: User['id']) {
-    return this.taskService.getAll(userId);
+  async getAll(
+    @CurrentUser('id') userId: User['id'],
+    @Query('workspaceId') workspaceId: Workspace['id'],
+  ) {
+    return this.taskService.getAll(workspaceId, userId);
   }
 
   @ApiOperation({
@@ -38,7 +43,7 @@ export class TaskController {
   @HttpCode(200)
   @Post()
   @Auth()
-  async create(@Body() dto: TaskDto, @CurrentUser('id') userId: string) {
+  async create(@Body() dto: CreateTaskDto, @CurrentUser('id') userId: string) {
     return this.taskService.create(dto, userId);
   }
 
@@ -50,7 +55,7 @@ export class TaskController {
   @Put(':id')
   @Auth()
   async update(
-    @Body() dto: TaskDto,
+    @Body() dto: UpdateTaskDto,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
